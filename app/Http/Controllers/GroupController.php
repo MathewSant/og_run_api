@@ -3,10 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Group;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 
 class GroupController extends Controller
 {
+    public function __construct(
+        protected CloudinaryService $cloudinary
+    ) {}
+
     /**
      * Listar grupos do usuário logado.
      */
@@ -65,6 +70,10 @@ class GroupController extends Controller
 
     /**
      * Atualizar um grupo.
+     *
+     * Regra da foto:
+     * - Se o front mandar uma foto nova (photoId diferente da atual) => deletar foto antiga no Cloudinary.
+     * - Se não mandar foto ou mandar igual => não deleta nada.
      */
     public function update(Request $request, Group $group)
     {
@@ -80,9 +89,20 @@ class GroupController extends Controller
             'city'        => 'sometimes|required|string|max:255',
         ]);
 
+        $oldPhotoId = $group->photo_id;
+
+        // novos valores (se vierem no payload)
+        $newPhotoId  = data_get($validated, 'photo.photoId', $group->photo_id);
+        $newPhotoUrl = data_get($validated, 'photo.photoUrl', $group->photo_url);
+
+        // se tinha foto antiga e o ID mudou => deleta a antiga
+        if ($oldPhotoId && $oldPhotoId !== $newPhotoId) {
+            $this->cloudinary->deleteImage($oldPhotoId);
+        }
+
         $group->fill([
-            'photo_id'    => data_get($validated, 'photo.photoId', $group->photo_id),
-            'photo_url'   => data_get($validated, 'photo.photoUrl', $group->photo_url),
+            'photo_id'    => $newPhotoId,
+            'photo_url'   => $newPhotoUrl,
             'name'        => $validated['name']        ?? $group->name,
             'description' => $validated['description'] ?? $group->description,
             'state'       => $validated['state']       ?? $group->state,
@@ -98,12 +118,18 @@ class GroupController extends Controller
 
     /**
      * Deletar um grupo.
-     * (Aqui a gente SÓ apaga do banco; remoção da imagem no Cloudinary
-     * pode ser feita antes chamando /api/photos/delete, se o front quiser.)
+     * Aqui também podemos limpar a foto do Cloudinary, se existir.
      */
     public function destroy(Request $request, Group $group)
     {
         $this->authorizeGroup($request, $group);
+
+        $photoId = $group->photo_id;
+
+        // se o grupo tinha foto, apagamos ela também
+        if ($photoId) {
+            $this->cloudinary->deleteImage($photoId);
+        }
 
         $group->delete();
 

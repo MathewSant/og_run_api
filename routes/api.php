@@ -16,14 +16,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('me',      [AuthController::class, 'me']);
     Route::post('logout', [AuthController::class, 'logout']);
 
-    // Cloudinary: delete foto pelo public_id
+    // Cloudinary: delete foto pelo public_id (rota “manual”, opcional)
     Route::post('photos/delete', [CloudinaryController::class, 'destroy']);
 
     // CRUD de grupos
-    Route::get('groups',          [GroupController::class, 'index']);
-    Route::post('groups',         [GroupController::class, 'store']);
-    Route::get('groups/{group}',  [GroupController::class, 'show']);
-    Route::put('groups/{group}',  [GroupController::class, 'update']);
-    Route::patch('groups/{group}',[GroupController::class, 'update']);
+    Route::get('groups',            [GroupController::class, 'index']);
+    Route::post('groups',           [GroupController::class, 'store']);
+    Route::get('groups/{group}',    [GroupController::class, 'show']);
+    Route::put('groups/{group}',    [GroupController::class, 'update']);
+    Route::patch('groups/{group}',  [GroupController::class, 'update']);
     Route::delete('groups/{group}', [GroupController::class, 'destroy']);
 });
